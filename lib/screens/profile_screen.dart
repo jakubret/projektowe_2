@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:zabytki_app/blocs/account/account_bloc.dart';
-import 'package:zabytki_app/blocs/account/account_event.dart';
-import 'package:zabytki_app/blocs/account/account_state.dart';
 import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
 import 'package:zabytki_app/blocs/auth/auth_event.dart';
 import 'package:zabytki_app/blocs/auth/auth_state.dart';
-//import 'package:zabytki_app/repositories/auth_repository.dart'; // Zaimportuj AuthRepository
 import 'package:zabytki_app/styles/color.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -14,17 +10,17 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AccountBloc, AccountState>(
+    return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AccountFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error)),
-          );
-        } else if (state is AccountSuccess) {
+        if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message)),
           );
-          context.read<AuthBloc>().add(AuthLoggedOut()); // Zmieniono na AuthLoggedOut
+        } else if (state is AuthUnauthenticated) {
+          // Tutaj możesz nawigować do ekranu logowania
+          Navigator.of(context).pushReplacementNamed('/'); // Zmień na swoją ścieżkę logowania
+        } else if (state is AuthLoading) {
+          // Możesz wyświetlić jakiś loading indicator
         }
       },
       child: Scaffold(
@@ -95,9 +91,9 @@ class ProfileScreen extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 40),
-              BlocBuilder<AccountBloc, AccountState>(
+              BlocBuilder<AuthBloc, AuthState>( // Używaj AuthBloc
                 builder: (context, state) {
-                  if (state is AccountLoading) {
+                  if (state is AuthLoading) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   return Padding(
@@ -110,7 +106,7 @@ class ProfileScreen extends StatelessWidget {
                             icon: const Icon(Icons.logout),
                             label: const Text('Wyloguj'),
                             onPressed: () {
-                              context.read<AccountBloc>().add(AccountLogoutRequested());
+                              context.read<AuthBloc>().add(AuthLogoutRequestedFromProfile()); // Wysyłaj zdarzenie AuthBloc
                             },
                           ),
                         ),
@@ -124,7 +120,7 @@ class ProfileScreen extends StatelessWidget {
                             icon: const Icon(Icons.delete),
                             label: const Text('Usuń konto'),
                             onPressed: () {
-                              final accountBloc = context.read<AccountBloc>();
+                              final authBloc = context.read<AuthBloc>(); // Używaj AuthBloc
                               showDialog(
                                 context: context,
                                 builder: (dialogContext) => AlertDialog(
@@ -140,7 +136,7 @@ class ProfileScreen extends StatelessWidget {
                                     TextButton(
                                       onPressed: () {
                                         Navigator.of(dialogContext).pop();
-                                        accountBloc.add(AccountDeleteRequested());
+                                        authBloc.add(AuthDeleteAccountRequested()); // Wysyłaj zdarzenie AuthBloc
                                       },
                                       child: const Text('Usuń'),
                                     ),
@@ -151,7 +147,6 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-                       
                       ],
                     ),
                   );
@@ -163,6 +158,4 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
-
-
 }

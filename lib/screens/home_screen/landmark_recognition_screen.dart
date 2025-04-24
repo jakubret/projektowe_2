@@ -18,7 +18,7 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
   String _description = "";
   String _answer = "";
   final _questionController = TextEditingController();
-  final String serverAddress = "http://172.20.10.14:8000";
+  final String serverAddress = "http://172.16.30.148:8000";
   List<Map<String, String>> conversation = [];
 
   Future<void> _getImage(ImageSource source) async {

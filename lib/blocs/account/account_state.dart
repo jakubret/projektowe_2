@@ -31,3 +31,10 @@ class AccountFailure extends AccountState {
   @override
   List<Object?> get props => [error];
 }
+class AccountSuccessLogout extends AccountSuccess {
+  const AccountSuccessLogout(super.message);
+}
+
+class AccountSuccessDelete extends AccountSuccess {
+  const AccountSuccessDelete(super.message);
+}

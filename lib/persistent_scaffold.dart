@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zabytki_app/screens/history_screen/history_screen.dart';
 import 'package:zabytki_app/screens/home_screen/landmark_recognition_screen.dart'; // Zaimportuj ekran rozpoznawania
 //import 'package:zabytki_app/screens/basket_screens/basket_screen.dart'; // Jeśli masz taki ekran
 //import 'package:zabytki_app/screens/order_screens/order_history_screen.dart'; // Jeśli masz taki ekran
@@ -19,7 +20,6 @@ class _PersistentScaffoldState extends State<PersistentScaffold> {
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
-    GlobalKey<NavigatorState>(),
   ];
 
   List<Widget> get _tabs => [
@@ -31,10 +31,17 @@ class _PersistentScaffoldState extends State<PersistentScaffold> {
             );
           },
         ),
-       
-        
+        // Dodaj nawigator dla ekranu historii, jeśli go masz
+         Navigator(
+           key: _navigatorKeys[1],
+           onGenerateRoute: (routeSettings) {
+             return MaterialPageRoute(
+               builder: (_) => const HistoryScreen(), // Zastąp OrderHistoryScreen() Twoim ekranem historii
+             );
+           },
+         ),
         Navigator(
-          key: _navigatorKeys[3],
+          key: _navigatorKeys[2],
           onGenerateRoute: (routeSettings) {
             return MaterialPageRoute(
               builder: (_) => const ProfileScreen(), // Zostaw lub zmień, jeśli nie masz
@@ -69,12 +76,11 @@ class _PersistentScaffoldState extends State<PersistentScaffold> {
             icon: Icon(Icons.home),
             label: 'Home',
           ),
-          
-        
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Historia',
-          ),
+          // Dodaj element BottomNavigationBarItem dla ekranu historii, jeśli go masz
+           BottomNavigationBarItem(
+             icon: Icon(Icons.history),
+             label: 'Historia',
+           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profil',

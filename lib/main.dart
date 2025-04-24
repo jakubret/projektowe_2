@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
 import 'package:zabytki_app/repositories/auth_repository.dart';
-import 'package:zabytki_app/auth_wrapper.dart'; // Assuming this is where you use AuthWrapper
+import 'package:zabytki_app/auth_wrapper.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,10 +20,10 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: RepositoryProvider(
-        create: (context) => AuthRepository(), // Create AuthRepository
+        create: (context) => AuthRepository(),
         child: BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc(authRepository: RepositoryProvider.of<AuthRepository>(context)), // Create AuthBloc
-          child: AuthWrapper(), // Use AuthWrapper, which uses LoginScreen
+          create: (context) => AuthBloc(authRepository: RepositoryProvider.of<AuthRepository>(context)),
+          child: AuthWrapper(),
         ),
       ),
     );

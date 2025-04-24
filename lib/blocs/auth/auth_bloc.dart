@@ -11,7 +11,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         super(AuthInitial()) {
     on<AuthStarted>(_onStarted);
     on<AuthLoggedOut>(_onLoggedOut);
-    on<AuthLoggedIn>(_onLoggedIn); // Dodaj obsługę zdarzenia logowania
+    on<AuthLoggedIn>(_onLoggedIn);
+    on<AuthLogoutRequestedFromProfile>(_onLogoutRequestedFromProfile);
+    on<AuthDeleteAccountRequested>(_onDeleteAccountRequested);
   }
 
   Future<void> _onStarted(AuthStarted event, Emitter<AuthState> emit) async {
@@ -26,6 +28,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLoggedIn(AuthLoggedIn event, Emitter<AuthState> emit) async {
+    _authRepository.setCurrentUser(event.user);
     emit(AuthAuthenticated(user: event.user));
   }
 
@@ -42,6 +45,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  Future<void> _onLogoutRequestedFromProfile(AuthLogoutRequestedFromProfile event, Emitter<AuthState> emit) async {
+    add(AuthLoggedOut());
+  }
+
+  Future<void> _onDeleteAccountRequested(AuthDeleteAccountRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    print('AuthDeleteAccountRequested: Attempting to delete account');
+    try {
+      await _authRepository.deleteAccount();
+      print('AuthDeleteAccountRequested: Account deleted');
+      emit(AuthUnauthenticated());
+      // Możesz dodać tutaj emitowanie innego stanu sukcesu usunięcia konta, jeśli potrzebujesz
+    } catch (e) {
+      print('AuthDeleteAccountRequested Error: $e');
+      emit(AuthError(message: e.toString()));
+    }
+  }
+
   // Nie będziesz miał tych metod bez Firebase
   // Future<void> createUserDocument(String userId, {Map<String, dynamic>? additionalData}) async {
   //   // Implementacja komunikacji z Twoją bazą danych
@@ -51,5 +72,3 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   //   // Implementacja komunikacji z Twoją bazą danych
   // }
 }
-
-// Dodaj nowe zdarzenie dla udanego logowania
