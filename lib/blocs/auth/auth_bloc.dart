@@ -53,11 +53,3 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 }
 
 // Dodaj nowe zdarzenie dla udanego logowania
-class AuthLoggedIn extends AuthEvent {
-  final User user;
-
-  AuthLoggedIn({required this.user});
-
-  @override
-  List<Object?> get props => [user]; // Dodaj właściwości do porównania
-}

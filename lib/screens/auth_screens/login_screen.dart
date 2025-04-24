@@ -1,3 +1,4 @@
+import 'package:zabytki_app/blocs/auth/auth_bloc.dart'; // Import AuthBloc
 import 'package:zabytki_app/blocs/login/login_bloc.dart';
 import 'package:zabytki_app/repositories/auth_repository.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +17,10 @@ class LoginScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: BlocProvider(
-          create: (context) => LoginBloc(authRepository: AuthRepository()),
+          create: (context) => LoginBloc(
+            authRepository: RepositoryProvider.of<AuthRepository>(context),
+            authBloc: BlocProvider.of<AuthBloc>(context), // Get AuthBloc instance here
+          ),
           child: const LoginForm(),
         ),
       ),

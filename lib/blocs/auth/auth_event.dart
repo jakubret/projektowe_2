@@ -1,7 +1,11 @@
 import 'package:equatable/equatable.dart';
+import 'package:zabytki_app/repositories/auth_repository.dart'; // Upewnij się, że ścieżka jest poprawna
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
+
+  @override
+  List<Object?> get props => [];
 }
 
 class AuthStarted extends AuthEvent {
@@ -10,13 +14,12 @@ class AuthStarted extends AuthEvent {
 }
 
 class AuthLoggedIn extends AuthEvent {
-  final String email;
-  final String password;
+  final User user;
 
-  const AuthLoggedIn({required this.email, required this.password});
+  const AuthLoggedIn({required this.user});
 
   @override
-  List<Object?> get props => [email, password];
+  List<Object?> get props => [user];
 }
 
 class AuthRegistered extends AuthEvent {
