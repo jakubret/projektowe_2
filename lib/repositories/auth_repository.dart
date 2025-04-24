@@ -1,8 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:zabytki_app/config.dart';
+
 class AuthRepository {
-  final String _baseUrl = "http://172.16.30.148:8000"; // Zmień na adres URL swojego backendu
+  final String _baseUrl = Config.serverAddress; // Zmień na adres URL swojego backendu
 
   Future<User?> register(String email, String password, String name) async {
     final Uri uri = Uri.parse('$_baseUrl/register');

@@ -22,7 +22,7 @@ class AuthWrapper extends StatelessWidget {
             // Nawiguj do strony głównej
             return const PersistentScaffold(); // Zmień na Twój widget strony głównej
           } else if (state is AuthUnauthenticated) {
-            return  LoginScreen();
+            return const LoginScreen();
           } else if (state is AuthLoading) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),

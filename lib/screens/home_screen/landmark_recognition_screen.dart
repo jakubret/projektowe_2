@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
+import 'package:zabytki_app/blocs/auth/auth_state.dart';
+import 'package:zabytki_app/config.dart'; // Zmień ścieżkę, jeśli plik jest w innym folderze
 class LandmarkRecognitionScreen extends StatefulWidget {
   const LandmarkRecognitionScreen({Key? key}) : super(key: key);
 
@@ -18,7 +21,7 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
   String _description = "";
   String _answer = "";
   final _questionController = TextEditingController();
-  final String serverAddress = "http://172.16.30.148:8000";
+  final String serverAddress = Config.serverAddress;
   List<Map<String, String>> conversation = [];
 
   Future<void> _getImage(ImageSource source) async {
@@ -44,13 +47,18 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
     });
   }
 
-  Future<void> _askQuestion() async {
-    final uri = Uri.parse("$serverAddress/ask/");
+  Future<void> _askQuestion(BuildContext context) async {
+  final uri = Uri.parse("$serverAddress/ask/");
+  final authBloc = BlocProvider.of<AuthBloc>(context); // Pobierz AuthBloc
+
+  if (authBloc.state is AuthAuthenticated) {
+    final userId = (authBloc.state as AuthAuthenticated).user!.id;
     final response = await http.post(uri,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'zabytek': _prediction,
           'question': _questionController.text,
+          'user_id': userId, // Dodaj ID użytkownika
         }));
 
     final data = json.decode(response.body);
@@ -62,7 +70,13 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
       });
       _questionController.clear();
     });
+  } else {
+    // Obsłuż sytuację, gdy użytkownik nie jest zalogowany
+    print("Użytkownik nie jest zalogowany.");
   }
+}
+
+// Zmień wywołanie _askQuestion w build:
 
   @override
   Widget build(BuildContext context) {
@@ -110,9 +124,9 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: _askQuestion,
-                child: const Text("Zapytaj"),
-              ),
+  onPressed: () => _askQuestion(context), // Użyj dwukropka (:) do przypisania funkcji
+  child: const Text("Zapytaj"),
+),
               const SizedBox(height: 20),
             ],
             if (conversation.isNotEmpty)

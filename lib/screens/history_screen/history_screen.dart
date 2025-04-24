@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
+import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
+import 'package:zabytki_app/blocs/auth/auth_state.dart';
+import 'package:zabytki_app/config.dart';
 import 'dart:convert';
 import 'package:zabytki_app/model/history.dart';
 class HistoryScreen extends StatefulWidget {
@@ -14,20 +18,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Set<int> _expandedItems = <int>{}; // Przechowuje ID rozwiniętych elementów
   bool _isLoading = false;
   String _errorMessage = '';
+final String serverAddress = Config.serverAddress;
 
   @override
-  void initState() {
-    super.initState();
-    _fetchHistory();
-  }
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _fetchHistory(context); // Przekaż context
+  });
+}
 
-  Future<void> _fetchHistory() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
+// W HistoryScreen (zmodyfikuj _fetchHistory)
+Future<void> _fetchHistory(BuildContext context) async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = '';
+  });
 
-    final Uri uri = Uri.parse('http://172.20.10.14:8000/history'); // Zmień na swój endpoint API
+  final authBloc = BlocProvider.of<AuthBloc>(context); // Pobierz AuthBloc
+
+  if (authBloc.state is AuthAuthenticated) {
+    final userId = (authBloc.state as AuthAuthenticated).user!.id;
+    final Uri uri = Uri.parse('$serverAddress/history?user_id=$userId'); // Dodaj user_id jako parametr
+
     try {
       final response = await http.get(uri);
 
@@ -49,7 +62,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _isLoading = false;
       });
     }
+  } else {
+    // Obsłuż sytuację, gdy użytkownik nie jest zalogowany
+    setState(() {
+      _errorMessage = 'Użytkownik nie jest zalogowany, nie można pobrać historii.';
+      _isLoading = false;
+    });
   }
+}
+
+// Zmień wywołanie _fetchHistory w initState:
+
 
   void _toggleExpansion(int itemId) {
     setState(() {
