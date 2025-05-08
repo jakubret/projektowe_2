@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:zabytki_app/repositories/auth_repository.dart'; // Upewnij się, że ścieżka jest poprawna
-import 'package:zabytki_app/model/user_model.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();

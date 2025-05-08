@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:zabytki_app/screens/history_screen/history_screen.dart';
 import 'package:zabytki_app/screens/home_screen/landmark_recognition_screen.dart'; // Zaimportuj ekran rozpoznawania
-import 'package:zabytki_app/screens/maps_screen/map_screen.dart';
 //import 'package:zabytki_app/screens/basket_screens/basket_screen.dart'; // Jeśli masz taki ekran
 //import 'package:zabytki_app/screens/order_screens/order_history_screen.dart'; // Jeśli masz taki ekran
 import 'package:zabytki_app/screens/profile_screen.dart'; // Jeśli masz taki ekran
 //import '../widgets/basket_icon_with_badge.dart'; // Jeśli używasz tego widgetu
-import 'package:zabytki_app/screens/maps_screen/map_screen.dart';
 
 class PersistentScaffold extends StatefulWidget {
   const PersistentScaffold({Key? key}) : super(key: key);
@@ -22,8 +20,6 @@ class _PersistentScaffoldState extends State<PersistentScaffold> {
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
-      GlobalKey<NavigatorState>(), // <- dodaj to
-
   ];
 
   List<Widget> get _tabs => [
@@ -49,14 +45,6 @@ class _PersistentScaffoldState extends State<PersistentScaffold> {
           onGenerateRoute: (routeSettings) {
             return MaterialPageRoute(
               builder: (_) => const ProfileScreen(), // Zostaw lub zmień, jeśli nie masz
-            );
-          },
-        ),
-        Navigator(
-          key: _navigatorKeys[3],
-          onGenerateRoute: (routeSettings) {
-            return MaterialPageRoute(
-              builder: (_) =>  MonumentMapScreen(), // Zostaw lub zmień, jeśli nie masz
             );
           },
         ),
@@ -97,10 +85,6 @@ class _PersistentScaffoldState extends State<PersistentScaffold> {
             icon: Icon(Icons.person),
             label: 'Profil',
           ),
-          BottomNavigationBarItem(
-      icon: Icon(Icons.map),
-      label: 'Mapa',
-    ),
         ],
         selectedItemColor: Colors.redAccent,
         unselectedItemColor: Colors.grey,
