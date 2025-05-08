@@ -6,12 +6,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
 import 'package:zabytki_app/blocs/auth/auth_state.dart';
-import 'package:zabytki_app/config.dart'; // Zmień ścieżkę, jeśli plik jest w innym folderze
+import 'package:zabytki_app/config.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:zabytki_app/screens/maps_screen/map_screen.dart';
+
 class LandmarkRecognitionScreen extends StatefulWidget {
   const LandmarkRecognitionScreen({Key? key}) : super(key: key);
 
   @override
-  _LandmarkRecognitionScreenState createState() => _LandmarkRecognitionScreenState();
+  _LandmarkRecognitionScreenState createState() =>
+      _LandmarkRecognitionScreenState();
 }
 
 class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
@@ -23,6 +27,48 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
   final _questionController = TextEditingController();
   final String serverAddress = Config.serverAddress;
   List<Map<String, String>> conversation = [];
+  IO.Socket? _socket;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectWebSocket(context);
+  }
+
+  @override
+  void dispose() {
+    _socket?.disconnect();
+    _socket?.dispose();
+    super.dispose();
+  }
+
+  void _connectWebSocket(BuildContext context) {
+    final authBloc = BlocProvider.of<AuthBloc>(context);
+    if (authBloc.state is AuthAuthenticated) {
+      final userId = (authBloc.state as AuthAuthenticated).user!.id;
+      _socket = IO.io(
+        serverAddress,
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .setQuery({'user_id': userId.toString()}) // Przekaż user_id
+            .build(),
+      );
+
+      _socket?.connect();
+
+      _socket?.onConnect((_) {
+        print('Połączono z WebSocket na LandmarkScreen');
+      });
+
+      _socket?.onDisconnect((_) {
+        print('Rozłączono z WebSocket na LandmarkScreen');
+      });
+
+      _socket?.onError((error) {
+        print('Błąd WebSocket na LandmarkScreen: $error');
+      });
+    }
+  }
 
   Future<void> _getImage(ImageSource source) async {
     final pickedFile = await picker.pickImage(source: source);
@@ -48,35 +94,42 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
   }
 
   Future<void> _askQuestion(BuildContext context) async {
-  final uri = Uri.parse("$serverAddress/ask/");
-  final authBloc = BlocProvider.of<AuthBloc>(context); // Pobierz AuthBloc
+    final uri = Uri.parse("$serverAddress/ask/");
+    final authBloc = BlocProvider.of<AuthBloc>(context);
 
-  if (authBloc.state is AuthAuthenticated) {
-    final userId = (authBloc.state as AuthAuthenticated).user!.id;
-    final response = await http.post(uri,
+    if (authBloc.state is AuthAuthenticated) {
+      final userId = (authBloc.state as AuthAuthenticated).user!.id;
+      final response = await http.post(
+        uri,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'zabytek': _prediction,
           'question': _questionController.text,
-          'user_id': userId, // Dodaj ID użytkownika
-        }));
+          'user_id': userId,
+        }),
+      );
 
-    final data = json.decode(response.body);
-    setState(() {
-      _answer = data['answer'] ?? "Brak odpowiedzi.";
-      conversation.add({
+      final data = json.decode(response.body);
+      setState(() {
+        _answer = data['answer'] ?? "Brak odpowiedzi.";
+        conversation.add({
+          'question': _questionController.text,
+          'answer': _answer,
+        });
+        _questionController.clear();
+      });
+
+      // Emituj zdarzenie WebSocket po zadaniu pytania
+      _socket?.emit('new_query', {
+        'user_id': userId,
+        'zabytek': _prediction,
         'question': _questionController.text,
         'answer': _answer,
       });
-      _questionController.clear();
-    });
-  } else {
-    // Obsłuż sytuację, gdy użytkownik nie jest zalogowany
-    print("Użytkownik nie jest zalogowany.");
+    } else {
+      print("Użytkownik nie jest zalogowany.");
+    }
   }
-}
-
-// Zmień wywołanie _askQuestion w build:
 
   @override
   Widget build(BuildContext context) {
@@ -124,11 +177,23 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-  onPressed: () => _askQuestion(context), // Użyj dwukropka (:) do przypisania funkcji
-  child: const Text("Zapytaj"),
-),
+                onPressed: () => _askQuestion(context),
+                child: const Text("Zapytaj"),
+              ),
               const SizedBox(height: 20),
             ],
+            if (_prediction.isNotEmpty && _description.isNotEmpty)
+            ElevatedButton(
+                onPressed: () { 
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MonumentMapScreen(recognizedLandmark: _prediction),
+                    ),
+                  );
+                },
+                child: const Text("Pokaż na mapie"),
+              ),
             if (conversation.isNotEmpty)
               Column(
                 children: conversation.map((msg) {

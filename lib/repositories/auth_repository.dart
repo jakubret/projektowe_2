@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:zabytki_app/model/user_model.dart';
 
 import 'package:zabytki_app/config.dart';
 
@@ -89,21 +90,5 @@ class AuthRepository {
     } else {
       throw Exception('Failed to delete account');
     }
-  }
-}
-
-class User {
-  final String id;
-  final String name;
-  final String email;
-
-  User({required this.id, required this.name, required this.email});
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['id'].toString(),
-      name: json['name'],
-      email: json['email'],
-    );
   }
 }
