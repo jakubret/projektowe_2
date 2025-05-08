@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
 import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
 import 'package:zabytki_app/blocs/auth/auth_state.dart';
 import 'package:zabytki_app/config.dart';
-import 'dart:convert';
 import 'package:zabytki_app/model/history.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -15,64 +17,125 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   List<HistoryItem> _historyItems = [];
-  Set<int> _expandedItems = <int>{}; // Przechowuje ID rozwiniętych elementów
+  Set<int> _expandedItems = <int>{};
   bool _isLoading = false;
   String _errorMessage = '';
-final String serverAddress = Config.serverAddress;
+  final String serverAddress = Config.serverAddress;
+  IO.Socket? _socket;
+  bool _isConnecting = false; // Dodaj flagę dla stanu połączenia
 
   @override
-void initState() {
-  super.initState();
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _fetchHistory(context); // Przekaż context
-  });
-}
+  void initState() {
+    super.initState();
+    _connectWebSocket(context);
+    _fetchInitialHistory(context);
+  }
 
-// W HistoryScreen (zmodyfikuj _fetchHistory)
-Future<void> _fetchHistory(BuildContext context) async {
-  setState(() {
-    _isLoading = true;
-    _errorMessage = '';
-  });
+  @override
+  void dispose() {
+    _socket?.disconnect();
+    _socket?.dispose();
+    super.dispose();
+  }
 
-  final authBloc = BlocProvider.of<AuthBloc>(context); // Pobierz AuthBloc
+  void _connectWebSocket(BuildContext context) {
+    final authBloc = BlocProvider.of<AuthBloc>(context);
+    if (authBloc.state is AuthAuthenticated) {
+      final userId = (authBloc.state as AuthAuthenticated).user!.id;
+      setState(() {
+        _isConnecting = true; // Ustaw flagę na true przed połączeniem
+      });
+      _socket = IO.io(
+        serverAddress,
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .setQuery({'user_id': userId.toString()})
+            .build(),
+      );
 
-  if (authBloc.state is AuthAuthenticated) {
-    final userId = (authBloc.state as AuthAuthenticated).user!.id;
-    final Uri uri = Uri.parse('$serverAddress/history?user_id=$userId'); // Dodaj user_id jako parametr
+      _socket?.connect();
 
-    try {
-      final response = await http.get(uri);
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      _socket?.onConnect((_) {
+        print('Połączono z WebSocket');
         setState(() {
-          _historyItems = data.map((item) => HistoryItem.fromJson(item as Map<String, dynamic>)).toList();
-          _isLoading = false;
+          _isConnecting =
+              false; // Ustaw flagę na false po pomyślnym połączeniu
         });
-      } else {
+      });
+
+      _socket?.onDisconnect((_) {
+        print('Rozłączono z WebSocket');
         setState(() {
-          _errorMessage = 'Wystąpił błąd podczas pobierania historii: ${response.statusCode}';
+          _isConnecting =
+              false; // Ustaw flagę na false po rozłączeniu
+        });
+      });
+
+      _socket?.on('new_query', (data) {
+        print('Otrzymano nowe zapytanie: $data');
+        try {
+          final newItem = HistoryItem.fromJson(data as Map<String, dynamic>);
+          setState(() {
+            _historyItems.insert(0, newItem); // Dodaj na początek listy
+          });
+        } catch (e) {
+          print('Błąd podczas parsowania nowego zapytania: $e');
+        }
+      });
+
+      _socket?.onError((error) {
+        print('Błąd WebSocket: $error');
+        setState(() {
+          _errorMessage = 'Wystąpił problem z połączeniem WebSocket.';
+          _isConnecting = false; // Ustaw flagę na false w przypadku błędu
+        });
+      });
+    }
+  }
+
+  Future<void> _fetchInitialHistory(BuildContext context) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    final authBloc = BlocProvider.of<AuthBloc>(context);
+
+    if (authBloc.state is AuthAuthenticated) {
+      final userId = (authBloc.state as AuthAuthenticated).user!.id;
+      final Uri uri = Uri.parse('$serverAddress/history?user_id=$userId');
+
+      try {
+        final response = await http.get(uri);
+
+        if (response.statusCode == 200) {
+          final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+          setState(() {
+            _historyItems = data
+                .map((item) => HistoryItem.fromJson(item as Map<String, dynamic>))
+                .toList();
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage =
+                'Wystąpił błąd podczas pobierania historii: ${response.statusCode}';
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Wystąpił błąd połączenia: $e';
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } else {
       setState(() {
-        _errorMessage = 'Wystąpił błąd połączenia: $e';
+        _errorMessage = 'Użytkownik nie jest zalogowany.';
         _isLoading = false;
       });
     }
-  } else {
-    // Obsłuż sytuację, gdy użytkownik nie jest zalogowany
-    setState(() {
-      _errorMessage = 'Użytkownik nie jest zalogowany, nie można pobrać historii.';
-      _isLoading = false;
-    });
   }
-}
-
-// Zmień wywołanie _fetchHistory w initState:
-
 
   void _toggleExpansion(int itemId) {
     setState(() {
@@ -93,7 +156,8 @@ Future<void> _fetchHistory(BuildContext context) async {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            title: Text(item.question, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title:
+                Text(item.question, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('Zabytek: ${item.zabytek}'),
             trailing: IconButton(
               icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
@@ -106,7 +170,8 @@ Future<void> _fetchHistory(BuildContext context) async {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Odpowiedź:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Odpowiedź:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8.0),
                   Text(item.answer),
                 ],
@@ -123,18 +188,30 @@ Future<void> _fetchHistory(BuildContext context) async {
       appBar: AppBar(
         title: const Text('Historia Zapytań'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-              ? Center(child: Text(_errorMessage))
-              : _historyItems.isEmpty
-                  ? const Center(child: Text('Brak historii zapytań.'))
-                  : ListView.builder(
-                      itemCount: _historyItems.length,
-                      itemBuilder: (context, index) {
-                        return _buildHistoryItem(_historyItems[index]);
-                      },
-                    ),
+      body: Stack(
+        children: [
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage.isNotEmpty
+                  ? Center(child: Text(_errorMessage))
+                  : _historyItems.isEmpty
+                      ? const Center(child: Text('Brak historii zapytań.'))
+                      : RefreshIndicator(
+                          onRefresh: () => _fetchInitialHistory(context),
+                          child: ListView.builder(
+                            itemCount: _historyItems.length,
+                            itemBuilder: (context, index) {
+                              return _buildHistoryItem(_historyItems[index]);
+                            },
+                          ),
+                        ),
+          if (_isConnecting) // Użyj _isConnecting
+            const Center(
+                child:
+                    CircularProgressIndicator()), // Wskaźnik łączenia WebSocket
+        ],
+      ),
     );
   }
 }
+

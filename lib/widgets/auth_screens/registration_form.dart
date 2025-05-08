@@ -1,3 +1,4 @@
+import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
 import 'package:zabytki_app/blocs/registration/registration_bloc.dart';
 import 'package:zabytki_app/blocs/registration/registration_event.dart';
 import 'package:zabytki_app/blocs/registration/registration_state.dart';
@@ -131,7 +132,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) =>  LoginScreen()),
+                  MaterialPageRoute(builder: (context) => const LoginScreen()), // Nie przekazuj authBloc
                         );
                       },
                       child: const Text("Zaloguj się"),

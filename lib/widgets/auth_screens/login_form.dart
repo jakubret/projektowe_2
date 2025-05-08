@@ -14,7 +14,6 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -26,6 +25,7 @@ class _LoginFormState extends State<LoginForm> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Zalogowano pomyślnie")),
           );
+          // Tutaj możesz dodać logikę nawigacji po zalogowaniu
         } else if (state is LoginFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Błąd: ${state.error}")),
@@ -110,7 +110,7 @@ class _LoginFormState extends State<LoginForm> {
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) =>  const RegistrationScreen()),
+                          MaterialPageRoute(builder: (context) => const RegistrationScreen()),
                         );
                       },
                       child: const Text("Zarejestruj się"),
