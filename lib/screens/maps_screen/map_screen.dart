@@ -12,6 +12,7 @@ class MonumentMapScreen extends StatefulWidget {
 
   @override
   State<MonumentMapScreen> createState() => _MonumentMapScreenState();
+  
 }
 
 class _MonumentMapScreenState extends State<MonumentMapScreen> {
@@ -20,6 +21,7 @@ class _MonumentMapScreenState extends State<MonumentMapScreen> {
   Position? _currentPosition;
   bool _locationServiceEnabled = false;
   bool _locationLoaded = false;
+  bool _monumentCentered = false;
 
   @override
   void initState() {
@@ -65,7 +67,10 @@ class _MonumentMapScreenState extends State<MonumentMapScreen> {
           _currentPosition = position;
           _locationLoaded = true;
         });
-        _mapController.move(LatLng(position.latitude, position.longitude), 15.0);
+        if (!_monumentCentered) {
+  _mapController.move(LatLng(position.latitude, position.longitude), 15.0);
+}
+
       }
     } catch (e) {
       print("Błąd podczas pobierania lokalizacji: $e");
@@ -75,7 +80,6 @@ class _MonumentMapScreenState extends State<MonumentMapScreen> {
   Future<void> _getMonumentDetails(String monumentName) async {
     final String url =
         'https://nominatim.openstreetmap.org/search?q=$monumentName&format=json&limit=1';
-
     try {
       final response = await http.get(
         Uri.parse(Uri.encodeFull(url)),
@@ -91,17 +95,19 @@ class _MonumentMapScreenState extends State<MonumentMapScreen> {
               longitude != null &&
               latitude.isFinite &&
               longitude.isFinite) {
+            final LatLng monumentLatLng = LatLng(latitude, longitude);
             setState(() {
               _monumentMarkers.add(
                 Marker(
                   width: 80.0,
                   height: 80.0,
-                  point: LatLng(latitude, longitude),
+                  point: monumentLatLng,
                   child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                 ),
               );
-              _mapController.move(LatLng(latitude, longitude), 16.0);
             });
+            _mapController.move(monumentLatLng, 16.0);
+            _monumentCentered = true;
           } else {
             print('Nieprawidłowe współrzędne (NaN/Infinity) dla: $monumentName');
           }
@@ -132,9 +138,9 @@ class _MonumentMapScreenState extends State<MonumentMapScreen> {
       );
     }
 
-    final initialLatLng = _locationLoaded
+    final initialLatLng = _currentPosition != null
         ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-        : const LatLng(50.0545, 19.9366); 
+        : const LatLng(0.0, 0.0); // domyślne, neutralne miejsce
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mapa')),
