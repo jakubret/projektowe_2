@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:zabytki_app/blocs/auth/auth_bloc.dart';
 import 'package:zabytki_app/blocs/auth/auth_state.dart';
 import 'package:zabytki_app/config.dart';
@@ -148,39 +149,68 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildHistoryItem(HistoryItem item) {
-    final isExpanded = _expandedItems.contains(item.id);
+  final isExpanded = _expandedItems.contains(item.id);
 
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            title:
-                Text(item.question, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Zabytek: ${item.zabytek}'),
-            trailing: IconButton(
-              icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
-              onPressed: () => _toggleExpansion(item.id),
+  return Card(
+    margin: const EdgeInsets.all(8.0),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 3,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          title: Text(
+            item.question,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-          if (isExpanded)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Odpowiedź:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8.0),
-                  Text(item.answer),
-                ],
-              ),
+          subtitle: Text(
+            'Zabytek: ${item.zabytek}',
+            style: const TextStyle(fontStyle: FontStyle.italic),
+          ),
+          trailing: IconButton(
+            icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+            onPressed: () => _toggleExpansion(item.id),
+          ),
+        ),
+        if (isExpanded)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Odpowiedź:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8.0),
+                MarkdownBody(
+                  data: item.answer,
+                  styleSheet: MarkdownStyleSheet(
+                    p: const TextStyle(
+                      fontFamily: 'monospace',
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                //Text(
+                //  item.answer,
+                //  style: const TextStyle(
+                //    fontFamily: 'monospace',
+                //    height: 1.4,
+                //  ),
+                //  textAlign: TextAlign.justify,
+                //),
+              ],
             ),
-        ],
-      ),
-    );
-  }
+          ),
+      ],
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

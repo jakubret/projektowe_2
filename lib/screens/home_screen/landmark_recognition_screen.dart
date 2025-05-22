@@ -11,6 +11,11 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:zabytki_app/screens/maps_screen/map_screen.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+// ... existing imports ...
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:zabytki_app/screens/maps_screen/map_screen.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+
 class LandmarkRecognitionScreen extends StatefulWidget {
   const LandmarkRecognitionScreen({Key? key}) : super(key: key);
 
@@ -29,6 +34,8 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
   final String serverAddress = Config.serverAddress;
   List<Map<String, String>> conversation = [];
   IO.Socket? _socket;
+  // Change this to store a list of monument names, not a list of maps.
+  List<String> _nearbyMonuments = []; // This will store the names of nearby monuments
 
   @override
   void initState() {
@@ -51,7 +58,7 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
         serverAddress,
         IO.OptionBuilder()
             .setTransports(['websocket'])
-            .setQuery({'user_id': userId.toString()}) // Przekaż user_id
+            .setQuery({'user_id': userId.toString()})
             .build(),
       );
 
@@ -67,6 +74,15 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
 
       _socket?.onError((error) {
         print('Błąd WebSocket na LandmarkScreen: $error');
+      });
+
+      // Listen for 'new_query' events from the backend to get real-time updates
+      _socket?.on('new_query', (data) {
+        if (data != null && data['nearby_monuments'] is List) {
+          setState(() {
+            _nearbyMonuments = List<String>.from(data['nearby_monuments']);
+          });
+        }
       });
     }
   }
@@ -111,26 +127,30 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
       );
 
       final data = json.decode(response.body);
+
       setState(() {
         _answer = data['answer'] ?? "Brak odpowiedzi.";
         conversation.add({
           'question': _questionController.text,
           'answer': _answer,
         });
+
+        // Check for 'nearby_monuments' and update the list
+        if (data['nearby_monuments'] is List) {
+          _nearbyMonuments = List<String>.from(data['nearby_monuments']);
+        } else {
+          _nearbyMonuments = []; // Clear if no nearby monuments are returned
+        }
+
         _questionController.clear();
       });
 
-      // Emituj zdarzenie WebSocket po zadaniu pytania
-      _socket?.emit('new_query', {
-        'user_id': userId,
-        'zabytek': _prediction,
-        'question': _questionController.text,
-        'answer': _answer,
-      });
-    } else {
-      print("Użytkownik nie jest zalogowany.");
+      // The socket emission for 'new_query' already handles 'nearby_monuments' from the backend.
+      // You don't need to explicitly emit it again from the client side unless you want to
+      // trigger a UI update on the client that just asked the question.
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +185,7 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
             if (_prediction.isNotEmpty)
               Text("Zabytek: $_prediction", style: const TextStyle(fontSize: 18)),
             if (_description.isNotEmpty)
-              MarkdownBody(data: "Opis: $_description"), // Użyj MarkdownBody tutaj
+              MarkdownBody(data: "Opis: $_description"),
             const SizedBox(height: 20),
             if (_prediction.isNotEmpty) ...[
               TextField(
@@ -189,8 +209,10 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          MonumentMapScreen(recognizedLandmark: _prediction),
+                      builder: (context) => MonumentMapScreen(
+                        recognizedLandmark: _prediction,
+                        nearbyMonuments: _nearbyMonuments, // Pass the list of nearby monuments
+                      ),
                     ),
                   );
                 },
@@ -206,7 +228,7 @@ class _LandmarkRecognitionScreenState extends State<LandmarkRecognitionScreen> {
                       Text("Pytanie: ${msg['question']}",
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 5),
-                      MarkdownBody(data: "Odpowiedź: ${msg['answer']}"), // Użyj MarkdownBody tutaj
+                      MarkdownBody(data: "Odpowiedź: ${msg['answer']}"),
                       const SizedBox(height: 15),
                     ],
                   );
