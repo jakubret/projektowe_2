@@ -1,0 +1,295 @@
+# swagger.yaml (lub api.yaml)
+swagger: '2.0'
+info:
+  title: Monument Recognition and Chat API
+  description: API for recognizing monuments from images, asking questions about them, and managing user accounts.
+  version: 1.0.0
+host: localhost:8000 
+basePath: /
+schemes:
+  - http
+
+tags:
+  - name: Prediction
+    description: Operations related to monument prediction.
+  - name: Chat
+    description: Operations related to asking questions about monuments.
+  - name: User Management
+    description: User registration and authentication.
+  - name: History
+    description: User query history.
+
+
+paths:
+  /predict/:
+    post:
+      tags:
+        - Prediction
+      summary: Predict monument from an image
+      description: Upload an image to get a monument prediction and a description from Gemini.
+      consumes:
+        - multipart/form-data
+      produces:
+        - application/json
+      parameters:
+        - in: formData
+          name: file
+          type: file
+          required: true
+          description: The image file to upload for prediction.
+      responses:
+        200:
+          description: Successful prediction.
+          schema:
+            type: object
+            properties:
+              prediction:
+                type: string
+                description: The name of the predicted monument.
+              description:
+                type: string
+                description: A description of the predicted monument from Gemini.
+        400:
+          description: No file uploaded.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: No file uploaded
+
+  /ask/:
+    post:
+      tags:
+        - Chat
+      summary: Ask a question about a monument
+      description: Ask a question about a specific monument and get an answer from Gemini. Special handling for "nearby monuments" queries.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Monument and question details.
+          required: true
+          schema:
+            type: object
+            required:
+              - zabytek
+              - question
+              - user_id
+            properties:
+              zabytek:
+                type: string
+                description: The name of the monument.
+                example: Wawel
+              question:
+                type: string
+                description: The question about the monument.
+                example: Jaka jest historia Wawelu?
+              user_id:
+                type: integer
+                description: The ID of the user asking the question.
+                example: 123
+              max_tokens:
+                type: integer
+                description: (Optional) Maximum output tokens for Gemini. Default is 250.
+                example: 500
+      responses:
+        200:
+          description: Successful answer.
+          schema:
+            type: object
+            properties:
+              answer:
+                type: string
+                description: The answer to the question.
+              nearby_monuments:
+                type: array
+                items:
+                  type: string
+                description: (Only for "nearby monuments" questions) A list of nearby monuments.
+        400:
+          description: Missing monument, question, or user ID.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Brak zabytku, pytania lub ID użytkownika
+
+  /register:
+    post:
+      tags:
+        - User Management
+      summary: Register a new user
+      description: Create a new user account.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: User registration details.
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+              - email
+              - password
+            properties:
+              name:
+                type: string
+                description: User's name.
+                example: Jan Kowalski
+              email:
+                type: string
+                format: email
+                description: User's email address (must be unique).
+                example: jan.kowalski@example.com
+              password:
+                type: string
+                format: password
+                description: User's password.
+                example: MyStrongP@ssw0rd
+      responses:
+        201:
+          description: Registration successful.
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Rejestracja udana
+        400:
+          description: Missing required data.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Brak wymaganych danych
+        409:
+          description: User with this email already exists.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Użytkownik o tym emailu już istnieje
+
+  /history:
+    get:
+      tags:
+        - History
+      summary: Get user's query history
+      description: Retrieve a list of previous questions and answers for a specific user.
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: user_id
+          type: integer
+          required: true
+          description: The ID of the user whose history to retrieve.
+          example: 123
+      responses:
+        200:
+          description: Successful retrieval of history.
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: The ID of the query.
+                zabytek:
+                  type: string
+                  description: The monument associated with the query.
+                question:
+                  type: string
+                  description: The question asked by the user.
+                answer:
+                  type: string
+                  description: The answer provided.
+        400:
+          description: Missing user ID.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Brak ID użytkownika
+
+  /login:
+    post:
+      tags:
+        - User Management
+      summary: User login
+      description: Authenticate a user with email and password.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: User login credentials.
+          required: true
+          schema:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+                format: email
+                description: User's email address.
+                example: jan.kowalski@example.com
+              password:
+                type: string
+                format: password
+                description: User's password.
+                example: MyStrongP@ssw0rd
+      responses:
+        200:
+          description: Successful login.
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Logowanie udane
+              user:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: User's ID.
+                  name:
+                    type: string
+                    description: User's name.
+                  email:
+                    type: string
+                    description: User's email.
+        400:
+          description: Missing email or password.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Brak emaila lub hasła
+        401:
+          description: Invalid credentials.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Nieprawidłowe hasło lub email
